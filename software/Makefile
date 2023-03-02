@@ -30,8 +30,8 @@ endif
 .PHONY: test
 test:
 	if [ -d ".venv" ]; then . .venv/bin/activate; fi
-	${PYTHON} -m coverage run -m authbox.tests $(TESTOPTS)
-	${PYTHON} -m coverage report
+	${PYTHON} -m coverage run --source=./ -m unittest discover -s . -p 'test_*.py' $(TESTOPTS)
+	${PYTHON} -m coverage report --fail-under=70
 
 .PHONY: format
 format:

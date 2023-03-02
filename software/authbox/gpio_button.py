@@ -39,27 +39,49 @@ class Button(BasePinThread):
         input_pin,
         output_pin,
         on_down=None,
+        on_up=None,
         blink_command_queue_cls=queue.Queue,
     ):
         super(Button, self).__init__(
             event_queue, config_name, int(input_pin), int(output_pin)
         )
 
+        self._input_pin = input_pin
         self._on_down = on_down
+        self._on_up = on_up
         self.blink_command_queue = blink_command_queue_cls()
         self.blink_duration = 0.5  # seconds
         self.blinking = False
         self.blink_count = 0
         self.steady_state = False
+
+        # This is intentially wordy as older versions may not have GPIO.BOTH
+        if self._on_down and self._on_up:
+            GPIO.add_event_detect(
+                self.input_pin, GPIO.BOTH, callback=self._callback, bouncetime=150
+            )
         if self._on_down:
             GPIO.add_event_detect(
                 self.input_pin, GPIO.FALLING, callback=self._callback, bouncetime=150
             )
+        if self._on_up:
+            GPIO.add_event_detect(
+                self.input_pin, GPIO.RISING, callback=self._callback, bouncetime=150
+            )
 
     def _callback(self, unused_channel):
         """Wrapper to queue events instead of calling them directly."""
-        if self._on_down:
+        if self._on_down and self._on_up:
+            # In theory this can be different between trigger
+            # and this read, but in reality should be fine
+            if GPIO.input(self._input_pin):
+                self.event_queue.put((self._on_up, self))
+            else:
+                self.event_queue.put((self._on_down, self))
+        elif self._on_down:
             self.event_queue.put((self._on_down, self))
+        elif self._on_up:
+            self.event_queue.put((self._on_up, self))
 
     def run_inner(self):
         """Perform one on/off/blink pulse."""
