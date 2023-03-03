@@ -24,19 +24,21 @@ import os
 import sys
 import subprocess
 import shlex
+from pathlib import Path
 
 from authbox.api import BaseDispatcher, GPIO
 from authbox.config import Config
 from authbox.timer import Timer
 
 DEVNULL = open('/dev/null', 'r+')
+_CHECK_LOCKED_FILE = '.locked.tmp'
 
 class Dispatcher(BaseDispatcher):
   def __init__(self, config):
     super(Dispatcher, self).__init__(config)
 
+    self.locked_file = Path(_CHECK_LOCKED_FILE)
     self.authorized = False
-    self.locked = False
     self.locker_id = None
     self.off_button_pressed = False
     self.load_config_object('on_button', on_down=self.on_button_down)
@@ -65,22 +67,37 @@ class Dispatcher(BaseDispatcher):
     pieces = shlex.split(value)
     return [p.format(*format_args) for p in pieces]
 
+  def lock(self, badge_id):
+    with open(self.locked_file, 'w') as f:
+      f.write(badge_id)
+  
+  def get_lock_info(self):
+    is_locked = False
+    locker_badge_id = None
+    if self.locked_file.is_file():
+      is_locked = True
+      with open(self.locked_file) as f:
+          locker_badge_id = f.read()
+    return is_locked, locker_badge_id
+    
+
   def badge_scan(self, badge_id):
     # Malicious badge "numbers" that contain spaces require this extra work.
-    command = self._get_command_line('auth', 'command', [badge_id])
+    user_command = self._get_command_line('auth', 'command', [badge_id])
+    admin_command = self._get_command_line('auth', 'command_admin', [badge_id])
     # TODO timeout
     # TODO test with missing command
-    rc = subprocess.call(command)
+    rc = subprocess.call(user_command)
+    admin_check = subprocess.call(admin_command)
     if GPIO.input(self.off_button.input_pin) :
         self.off_button_pressed = False
     if rc == 0:
-      if self.off_button_pressed:
-        # Only person who locked it can unlock
-        if self.locked:
+      is_locked, locker_badge_id = self.get_lock_info()
+      if admin_check == 0 and self.off_button_pressed:
+        if is_locked:
           if self.locker_id == badge_id:
             print("unlocked")
-            self.locked = False
-            self.locker_id = None
+            self.locked_file.unlink()
             self.on_button.blink(1)
           else:
             print("tried unock diff badge")
@@ -88,19 +105,14 @@ class Dispatcher(BaseDispatcher):
             self.off_button.blink(1)
         else:
             print("locked")
-            self.locked = True
-            self.locker_id = badge_id
+            self.lock(badge_id)
             self.buzzer.beep()
             self.off_button.blink(2)
         return
-      # If locked, user who locked it can use
-      if self.locked:
-        if self.locker_id != badge_id:
-            print("tried unlock while locked with diff badge")
-            self.negative_signal()
-            return
-        else:
-            print("tried unock same badge worked")
+      if is_locked and admin_check != 0:
+        print("tried unlock while locked with diff badge")
+        self.negative_signal()
+        return
       self.buzzer.beep()
       self.authorized = True
       self.badge_id = badge_id
