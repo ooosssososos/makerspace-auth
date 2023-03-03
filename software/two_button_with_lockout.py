@@ -71,6 +71,8 @@ class Dispatcher(BaseDispatcher):
     # TODO timeout
     # TODO test with missing command
     rc = subprocess.call(command)
+    if GPIO.input(self.off_button.input_pin) :
+        self.off_button_pressed = False
     if rc == 0:
       if self.off_button_pressed:
         # Only person who locked it can unlock

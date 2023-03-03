@@ -17,8 +17,6 @@
 
 from authbox.api import GPIO, BasePinThread
 from authbox.compat import queue
-from authbox.timer import Timer
-import time
 
 
 class Button(BasePinThread):
@@ -47,9 +45,8 @@ class Button(BasePinThread):
         super(Button, self).__init__(
             event_queue, config_name, int(input_pin), int(output_pin)
         )
-        self.last_event = 0
-        self.button_release_timer = Timer(event_queue, "button_timer", self.check_up)
-        self._input_pin = int(input_pin)
+
+        self.input_pin = int(input_pin)
         self._on_down = on_down
         self._on_up = on_up
         self.blink_command_queue = blink_command_queue_cls()
@@ -61,7 +58,7 @@ class Button(BasePinThread):
         # This is intentially wordy as older versions may not have GPIO.BOTH
         if self._on_down and self._on_up:
             GPIO.add_event_detect(
-                self.input_pin, GPIO.BOTH, callback=self._callback
+                self.input_pin, GPIO.BOTH, callback=self._callback, bouncetime=150
             )
         elif self._on_down:
             GPIO.add_event_detect(
@@ -72,27 +69,14 @@ class Button(BasePinThread):
                 self.input_pin, GPIO.RISING, callback=self._callback, bouncetime=150
             )
 
-    def check_up(self, source):
-        if GPIO.input(self._input_pin):
-            self.event_queue.put((self._on_up, self))
-            print("pin_up2")
-
     def _callback(self, unused_channel):
         """Wrapper to queue events instead of calling them directly."""
         if self._on_down and self._on_up:
             # In theory this can be different between trigger
             # and this read, but in reality should be fine
-            if time.time() - self.last_event < .150:
-                print('button release timer started')
-                self.button_release_timer.cancel()
-                self.button_release_timer.set(1)
-            elif GPIO.input(self._input_pin):
-                self.last_event = time.time()
-                print("pin_up")
+            if GPIO.input(self.input_pin):
                 self.event_queue.put((self._on_up, self))
             else:
-                print("pin_down")
-                self.last_event = time.time()
                 self.event_queue.put((self._on_down, self))
         elif self._on_down:
             self.event_queue.put((self._on_down, self))
