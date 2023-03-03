@@ -76,13 +76,16 @@ class Dispatcher(BaseDispatcher):
         # Only person who locked it can unlock
         if self.locked:
           if self.locker_id == badge_id:
+            print("locked")
             self.locked = False
             self.locker_id = None
             self.on_button.blink(1)
           else:
+            print("tried unock diff badge")
             self.buzzer.beep()
             self.off_button.blink(1)
         else:
+            print("unlocked")
             self.locked = True
             self.locker_id = badge_id
             self.buzzer.beep()
@@ -91,8 +94,11 @@ class Dispatcher(BaseDispatcher):
       # If locked, user who locked it can use
       if self.locked:
         if self.locker_id != badge_id:
+            print("tried unlock while locked with diff badge")
             self.negative_signal()
             return
+        else:
+            print("tried unock same badge worked")
       self.buzzer.beep()
       self.authorized = True
       self.badge_id = badge_id
