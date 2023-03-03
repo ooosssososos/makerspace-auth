@@ -61,7 +61,7 @@ class Button(BasePinThread):
         # This is intentially wordy as older versions may not have GPIO.BOTH
         if self._on_down and self._on_up:
             GPIO.add_event_detect(
-                self.input_pin, GPIO.BOTH, callback=self._callback, bouncetime=0
+                self.input_pin, GPIO.BOTH, callback=self._callback
             )
         elif self._on_down:
             GPIO.add_event_detect(
