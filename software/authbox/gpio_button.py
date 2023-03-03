@@ -75,6 +75,7 @@ class Button(BasePinThread):
     def check_up(self, source):
         if GPIO.input(self._input_pin):
             self.event_queue.put((self._on_up, self))
+            print("pin_up2")
 
     def _callback(self, unused_channel):
         """Wrapper to queue events instead of calling them directly."""
