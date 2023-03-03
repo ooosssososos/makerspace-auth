@@ -78,7 +78,7 @@ class Dispatcher(BaseDispatcher):
         # Only person who locked it can unlock
         if self.locked:
           if self.locker_id == badge_id:
-            print("locked")
+            print("unlocked")
             self.locked = False
             self.locker_id = None
             self.on_button.blink(1)
@@ -87,7 +87,7 @@ class Dispatcher(BaseDispatcher):
             self.buzzer.beep()
             self.off_button.blink(1)
         else:
-            print("unlocked")
+            print("locked")
             self.locked = True
             self.locker_id = badge_id
             self.buzzer.beep()
