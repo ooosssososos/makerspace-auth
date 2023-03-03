@@ -83,6 +83,7 @@ class Button(BasePinThread):
             # and this read, but in reality should be fine
             if time.time() - self.last_event < .150:
                 print('button release timer started')
+                self.button_release_timer.cancel()
                 self.button_release_timer.set(1)
             elif GPIO.input(self._input_pin):
                 self.last_event = time.time()
