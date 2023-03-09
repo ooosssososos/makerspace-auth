@@ -119,6 +119,9 @@ class Dispatcher(BaseDispatcher):
   def negative_signal(self):
     self.off_button.blink(1)
     self.buzzer.beep()
+    is_locked, locker_badge_id = self.get_lock_info()
+    if is_locked:
+        self.off_button.on()
     if self.noise:
       self.noise.kill()
     if self.config.get('sounds', 'enable') == '1':
@@ -128,13 +131,7 @@ class Dispatcher(BaseDispatcher):
   def on_button_down(self, source):
     print("Button down", source)
     if not self.authorized:
-      self.off_button.blink(1)
-      self.buzzer.beep()
-      if self.noise:
-        self.noise.kill()
-      if self.config.get('sounds', 'enable') == '1':
-        sound_command = self._get_command_line('sounds', 'command', [self.config.get('sounds', 'sad_filename')])
-        self.noise = subprocess.Popen(sound_command, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+      self.negative_signal()
       return
     self.expecting_press_timer.cancel()
     self.on_button.on()
