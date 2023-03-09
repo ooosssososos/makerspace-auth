@@ -95,14 +95,9 @@ class Dispatcher(BaseDispatcher):
       is_locked, locker_badge_id = self.get_lock_info()
       if admin_check == 0 and self.off_button_pressed:
         if is_locked:
-          if self.locker_id == badge_id:
             print("unlocked")
             self.locked_file.unlink()
             self.on_button.blink(1)
-          else:
-            print("tried unock diff badge")
-            self.buzzer.beep()
-            self.off_button.blink(1)
         else:
             print("locked")
             self.lock(badge_id)
